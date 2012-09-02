@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+    <title>Interactive Example</title>
+    <script type="text/javascript" src="./lib/jquery-latest.js"></script>
+    <script type="text/javascript" src="./lib/d3.js"></script>
+    <!-- Tangle -->
+    <script type="text/javascript" src="./lib/Tangle/Tangle.js"></script>
+    <!-- TangleKit -->
+    <link rel="stylesheet" href="./lib/Tangle/TangleKit/TangleKit.css" type="text/css">
+    <script type="text/javascript" src="./lib/Tangle/TangleKit/mootools.js"></script>
+    <script type="text/javascript" src="./lib/Tangle/TangleKit/sprintf.js"></script>
+    <script type="text/javascript" src="./lib/Tangle/TangleKit/BVTouchable.js"></script>
+    <script type="text/javascript" src="./lib/Tangle/TangleKit/TangleKit.js"></script>
+
+    <script type="text/javascript" src="./lib/mathjax/unpacked/MathJax.js?config=MML_HTMLorMML-full"></script>
+    
+    <script type="text/javascript" src="injector.js"></script>
+    
+<link rel="stylesheet" href="ccap-physics.css"/>
+<!--
+    <script type="text/javascript">
+      // "confirm" is how we comminucate with PhantomJS
+      window.PhantomJS = confirm("__PhantomJS? If you're a human seeing this hit __Cancel__ so you can play around! \nWe use confirm to communicate with PhantomJS to let it know when the document is fully loaded. \nSome examples include jQuery, various animations, but most unfortunately MathJax");
+    MathJax.Hub.Queue(function() {
+      if (window.PhantomJS) {
+        confirm("__PhantomJS_SUCCEEDED MathJax is done! You can continue making a PDF!");
+      }
+    });
+    </script>
+-->
+    
+    <style>
+      *[data-var]:not([class]) { border-bottom: 1px dotted #eee; }
+
+/* Bezier curves */
+.curve, .line {
+        fill: none;
+        stroke-width: 1px;
+      }
+      .curve {
+        stroke: red;
+        stroke-width: 2px;
+      }
+      .control {
+        fill: #ccc;
+        stroke: #000;
+        stroke-width: .5px;
+      }
+      .t, .controltext {
+        font-size: .6em;
+      }
+
+    </style>
+  </head>

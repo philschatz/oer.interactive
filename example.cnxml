@@ -1,0 +1,860 @@
+<content
+  xmlns="http://cnx.rice.edu/cnxml"
+  xmlns:data="http://dev.w3.org/html5/spec/#custom">
+
+<!-- The following sections are a "HACK" to get the ccap-physics styling and numbering to work -->
+<section class="book"><title>Interactive Examples</title>
+<section class="chapter"><title>First stab (chapter)</title>
+<section><title>Tangle, d3, and MathJax</title>
+
+
+  <!-- ============== -->
+  <!-- Tangle Example -->
+  <!-- ============== -->
+  <example>
+    <title>Tangle Example</title>
+    <section id="tangle"
+
+data:script="
+//
+&#10;//  CookieExample.js
+&#10;//  Tangle
+&#10;//
+&#10;//  Created by Bret Victor on 6/10/11.
+&#10;//  (c) 2011 Bret Victor.  MIT open-source license.
+&#10;//
+&#10;
+&#10;var model = {
+&#10;
+&#10;  initialize: function () {
+&#10;      this.parkCount = 278;
+&#10;      this.oldAdmission = 12;
+&#10;      this.registeredVehicleCount = 28e6;  // http://www.yesforstateparks.com/get-the-facts/fact-sheets/general-fact-sheet
+&#10;      this.taxpayerCount = 13657632;  // http://trac.syr.edu/tracirs/findings/aboutTP/states/California/counties/06000/06000main.html
+&#10;      this.oldVisitorCount = 75e6;  // http://parks.ca.gov/pages/712/files/budget%20fact%20sheet%20w-graphics%20-%2001-14-08.pdf
+&#10;      this.oldBudget = 400e6; // this is not really correct, it ignores revenue, but I couldn't find any revenue data
+&#10;      this.oldClosedParkCount = 150;
+&#10;
+&#10;      this.percentOfAdmissionConvertedToRevenue = 0.1;  // total BS, couldn't find real data, just trying to make the numbers work
+&#10;      this.percentInStateVistors = 85;
+&#10;      this.percentVehicleOwners = 95;
+&#10;
+&#10;      this.tax = 18;
+&#10;      this.percentCompliance = 100;
+&#10;      this.isTaxPerVehicle = true;
+&#10;      this.newAdmission = 0;
+&#10;      this.newAdmissionAppliesToEveryone = false;
+&#10;  },
+&#10;  
+&#10;  update: function () {
+&#10;      var taxCount = this.isTaxPerVehicle ? this.registeredVehicleCount : this.taxpayerCount;
+&#10;      this.taxCollected = this.tax * this.percentCompliance/100 * taxCount;
+&#10;      
+&#10;      var fractionOfVisitorsEligibleForNewAdmission = this.newAdmissionAppliesToEveryone ? 1 :
+&#10;          (this.percentInStateVistors/100 * (this.isTaxPerVehicle ? (this.percentVehicleOwners/100) : 1));
+&#10;      var averageAdmission = this.oldAdmission + fractionOfVisitorsEligibleForNewAdmission * (this.newAdmission - this.oldAdmission);
+&#10;
+&#10;      // fake demand curve
+&#10;      this.newVisitorCount = this.oldVisitorCount * Math.max(0.2, 1 + 0.5*Math.atan(1 - averageAdmission/this.oldAdmission));
+&#10;      
+&#10;      var oldRevenue = this.oldVisitorCount * this.oldAdmission * this.percentOfAdmissionConvertedToRevenue;
+&#10;      var newRevenue = this.newVisitorCount * averageAdmission * this.percentOfAdmissionConvertedToRevenue;
+&#10;      
+&#10;      this.deltaRevenue = newRevenue - oldRevenue;
+&#10;      this.deltaBudget = this.taxCollected + this.deltaRevenue;
+&#10;      this.deltaVisitorCount = this.newVisitorCount - this.oldVisitorCount;
+&#10;      this.relativeVisitorCount = Math.abs(this.deltaVisitorCount / this.oldVisitorCount);
+&#10;
+&#10;      this.budget = this.oldBudget + this.deltaBudget;
+&#10;      
+&#10;      var maintainanceBudget = 600e6;
+&#10;      var repairBudget = 750e6;
+&#10;      var maxBudget = 1000e6;
+&#10;      
+&#10;      if (this.budget &lt; maintainanceBudget) {
+&#10;          this.scenarioIndex = 0;
+&#10;          this.closedParkCount = this.oldClosedParkCount * (maintainanceBudget - this.budget) / (maintainanceBudget - this.oldBudget);
+&#10;          this.closedParkCount = Math.round(this.closedParkCount);
+&#10;      }
+&#10;      else if (this.budget &lt; repairBudget) {
+&#10;          this.scenarioIndex = 1;
+&#10;      }
+&#10;      else if (this.budget &lt; maxBudget) {
+&#10;          this.scenarioIndex = 2;
+&#10;          this.restorationTime = Math.round(10 - 9 * (this.budget - repairBudget) / (maxBudget - repairBudget));
+&#10;      }
+&#10;      else {
+&#10;          this.scenarioIndex = 3;
+&#10;          this.surplus = this.budget - maxBudget;
+&#10;      }
+&#10;  },
+&#10;}
+&#10;
+&#10;new Tangle(config.context,model);
+&#10;">
+      <title>Proposition 21:  Vehicle License Fee for State Parks</title>
+      <section>
+        <title>The way it is now:</title>
+        <para>California has <span data:var="parkCount"><!-- nothing --></span> state parks, including state beaches and historic parks. 
+          The current $<span data:var="oldBudget" data:format="e6"><!-- nothing --></span> million budget is insufficient to maintain these parks, and <span data:var="oldClosedParkCount"><!-- nothing --></span> parks will be shut down at least part-time.
+          Most parks charge <span data:var="oldAdmission" data:format="dollars"><!-- nothing --></span> per vehicle for admission.</para>
+      </section>
+      <section>
+        <title>What Prop 21 would do:</title>
+        <para>Proposes to charge car owners an extra $18 on their annual registration bill, to go into the state park fund.  Cars that pay the charge would have free park admission.</para>
+      </section>
+      <section>
+        <title>Analysis:</title>
+        <para>Suppose that an extra <span data:var="tax" data:format="$%d" class="TKAdjustableNumber" data:min="0" data:max="50"><!-- nothing --></span>
+                    
+                   was charged to
+      <span data:var="percentCompliance" class="TKAdjustableNumber" data:min="0" data:max="100" data:step="5">%</span>
+                    
+                   of
+      <span data:var="isTaxPerVehicle" class="TKToggle TKSwitch">
+            <span>California taxpayers</span>
+            <span>vehicle registrations</span>
+          </span>
+                    
+                  .
+          Park admission would be <span data:var="newAdmission" data:format="free" class="TKAdjustableNumber" data:min="0" data:max="25"><!-- nothing --></span>
+                    
+                   for
+      <span data:var="newAdmissionAppliesToEveryone" class="TKToggle TKSwitch">
+            <span>those who paid the charge</span>
+            <span>everyone</span>
+          </span>
+                    
+                  .
+  </para>
+        <para>This would <span data:var="deltaBudget" class="TKSwitchPositiveNegative">
+            <span>collect an extra</span>
+            <span>lose</span>
+          </span>
+                    
+                  
+          $<span data:var="deltaBudget" data:format="abs_e6"><!-- nothing --></span>
+                    
+                   million
+          ($<span data:var="taxCollected" data:format="e6"><!-- nothing --></span>
+                    
+                   million from the tax,
+      <span data:var="deltaRevenue" class="TKSwitchPositiveNegative">
+            <span>plus</span>
+            <span>minus</span>
+          </span>
+                    
+                  
+          $<span data:var="deltaRevenue" data:format="abs_e6"><!-- nothing --></span>
+                    
+                   million
+      <span data:var="deltaRevenue" class="TKSwitchPositiveNegative">
+            <span>additional</span>
+            <span>lost</span>
+          </span>
+                    
+                   revenue from admission)
+          for a total state park budget of $<span data:var="budget" data:format="e6"><!-- nothing --></span>
+                    
+                   million.
+          
+  <span data:var="scenarioIndex" class="TKSwitch">
+            <span>This is not sufficient to maintain the parks, and
+          <span data:var="closedParkCount"><!-- nothing --></span>
+                            
+                              parks would be shut down at least part-time.</span>
+            <span>This is sufficient to maintain the parks in their current state, but not fund
+                  a program to bring safety and cleanliness up to acceptable standards.</span>
+            <span>This is sufficient to maintain the parks in their current state, plus fund a program to 
+                  bring safety and cleanliness up to acceptable standards over the next
+          <span data:var="restorationTime"><!-- nothing --></span>
+                            
+                           years.</span>
+            <span>This is sufficient to maintain the parks and bring safety and cleanliness up to acceptable standards,
+                  leaving a $<span data:var="surplus" data:format="e6"><!-- nothing --></span>
+                            
+                           million per year surplus.</span>
+          </span>
+        </para>
+        <para>Park attendance would
+      <span data:var="deltaVisitorCount" class="TKSwitchPositiveNegative">
+            <span>rise</span>
+            <span>fall</span>
+          </span>
+                    
+                   by
+      <span data:var="relativeVisitorCount" data:format="percent"><!-- nothing --></span>
+                    
+                  , to
+      <span data:var="newVisitorCount" data:format="e6"><!-- nothing --></span>
+                    
+                   million visits each year.</para>
+      </section>
+    </section>
+  </example>
+  <!-- ============== -->
+  <!-- d3 Chord Example -->
+  <!-- ============== -->
+  <example>
+    <title>Interactive Chord Example (using the d3 library)</title>
+    <section><title>Euro Debt Crisis</title>
+    <figure id="d3-chord">
+      <media alt=""
+data:input="creditor,debtor,amount,risk
+&#10;Britain,France,22.4,3
+&#10;Britain,Greece,0.55,0
+&#10;Britain,Italy,26,0
+&#10;Britain,Portugal,19.4,0
+&#10;Britain,United States,345,1
+&#10;France,Germany,53.8,1
+&#10;France,Greece,53.9,0
+&#10;France,Ireland,17.3,0
+&#10;France,Italy,366,0
+&#10;France,Japan,7.73,1
+&#10;France,Portugal,18.3,0
+&#10;France,Spain,118,2
+&#10;France,United States,322,1
+&#10;Germany,Britain,321,1
+&#10;Germany,Greece,19.3,0
+&#10;Germany,Ireland,48.9,0
+&#10;Germany,Portugal,32.5,0
+&#10;Germany,Spain,57.6,2
+&#10;Germany,United States,324,1
+&#10;Ireland,Britain,12,1
+&#10;Ireland,Greece,0.34,0
+&#10;Ireland,Spain,6.38,2
+&#10;Italy,Germany,111,1
+&#10;Italy,Greece,3.22,0
+&#10;Italy,Ireland,2.83,0
+&#10;Italy,Portugal,0.87,0
+&#10;Japan,Britain,28.2,1
+&#10;Japan,Germany,88.5,1
+&#10;Japan,Greece,1.37,0
+&#10;Japan,Ireland,18.9,0
+&#10;Japan,Italy,38.8,0
+&#10;Japan,Portugal,2.18,0
+&#10;Japan,Spain,25.9,2
+&#10;Japan,United States,796,1
+&#10;Portugal,Greece,10.1,0
+&#10;Portugal,Ireland,3.77,0
+&#10;Portugal,United States,0.52,1
+&#10;Spain,Britain,326,1
+&#10;Spain,Greece,0.78,0
+&#10;Spain,Italy,9.79,0
+&#10;Spain,Portugal,62,0
+&#10;Spain,United States,163,1
+&#10;United States,Greece,3.1,0
+&#10;United States,Ireland,11.1,0
+&#10;United States,Italy,3.16,0"
+
+data:script="// Chart dimensions.
+&#10;var w = 400,
+&#10;    h = 300,
+&#10;    r1 = Math.min(w, h) / 2 - 40,
+&#10;    r0 = r1 - 20,
+&#10;    format = d3.format(&quot;,.3r&quot;);
+&#10;
+&#10;var innerRadius = r0,
+&#10;    outerRadius = r1;
+&#10;
+&#10;
+&#10;// Square matrices, asynchronously loaded; credits is the transpose of debits.
+&#10;var debits = [],
+&#10;    credits = [];
+&#10;
+&#10;// The chord layout, for computing the angles of chords and groups.
+&#10;var layout = d3.layout.chord()
+&#10;    .sortGroups(d3.descending)
+&#10;    .sortSubgroups(d3.descending)
+&#10;    .sortChords(d3.descending)
+&#10;    .padding(.04);
+&#10;
+&#10;// The color scale, for different categories of &quot;worrisome&quot; risk.
+&#10;var fill = d3.scale.ordinal()
+&#10;    .domain([0, 1, 2])
+&#10;    .range([&quot;#DB704D&quot;, &quot;#D2D0C6&quot;, &quot;#ECD08D&quot;, &quot;#F8EDD3&quot;]);
+&#10;
+&#10;// The arc generator, for the groups.
+&#10;var arc = d3.svg.arc()
+&#10;    .innerRadius(r0)
+&#10;    .outerRadius(r1);
+&#10;
+&#10;// The chord generator (quadratic Bézier), for the chords.
+&#10;var chord = d3.svg.chord()
+&#10;    .radius(r0);
+&#10;
+&#10;// Add an SVG element for each diagram, and translate the origin to the center.
+&#10;var svg = d3.select(config.contextSelector).selectAll(&quot;div&quot;)
+&#10;    .data([debits, credits])
+&#10;  .enter().append(&quot;div&quot;)
+&#10;    .style(&quot;display&quot;, &quot;inline-block&quot;)
+&#10;//    .style(&quot;width&quot;, w + &quot;px&quot;)
+&#10;//    .style(&quot;height&quot;, h + &quot;px&quot;)
+&#10;    .style(&quot;width&quot;, &quot;50%&quot;)
+&#10;  .append(&quot;svg:svg&quot;)
+&#10;//    .attr(&quot;width&quot;, w)
+&#10;//    .attr(&quot;height&quot;, h)
+&#10;    .attr(&quot;viewport&quot;, '0 0 ' + w + ' ' + h)
+&#10;  .append(&quot;svg:g&quot;)
+&#10;    .attr(&quot;transform&quot;, &quot;translate(&quot; + w / 2 + &quot;,&quot; + h / 2 + &quot;)&quot;);
+&#10;
+&#10;// Load our data file…
+&#10;var data = d3.csv.parse(config.input);
+&#10;  var countries = {},
+&#10;      array = [],
+&#10;      n = 0;
+&#10;
+&#10;  // Compute a unique id for each country.
+&#10;  data.forEach(function(d) {
+&#10;    d.creditor = country(d.creditor);
+&#10;    d.debtor = country(d.debtor);
+&#10;    d.debtor.risk = d.risk;
+&#10;    d.valueOf = value; // convert object to number implicitly
+&#10;  });
+&#10;
+&#10;  // Initialize a square matrix of debits and credits.
+&#10;  for (var i = 0; i &lt; n; i++) {
+&#10;    debits[i] = [];
+&#10;    credits[i] = [];
+&#10;    for (var j = 0; j &lt; n; j++) {
+&#10;      debits[i][j] = 0;
+&#10;      credits[i][j] = 0;
+&#10;    }
+&#10;  }
+&#10;
+&#10;  // Populate the matrices, and stash a map from id to country.
+&#10;  data.forEach(function(d) {
+&#10;    debits[d.creditor.id][d.debtor.id] = d;
+&#10;    credits[d.debtor.id][d.creditor.id] = d;
+&#10;    array[d.creditor.id] = d.creditor;
+&#10;    array[d.debtor.id] = d.debtor;
+&#10;  });
+&#10;
+&#10;  // For each diagram…
+&#10;  svg.each(function(matrix, j) {
+&#10;    var svg = d3.select(this);
+&#10;
+&#10;    // Compute the chord layout.
+&#10;    layout.matrix(matrix);
+&#10;
+&#10;    // Add chords.
+&#10;    svg.selectAll(&quot;path.chord&quot;)
+&#10;      .data(layout.chords)
+&#10;      .enter().append(&quot;svg:path&quot;)
+&#10;        .attr(&quot;class&quot;, &quot;chord&quot;)
+&#10;        .attr('stroke-width', '.75')  // From the CSS file
+&#10;        .attr('fill-opacity', '.75') // From the CSS file
+&#10;        .style(&quot;fill&quot;, function(d) { return fill(d.source.value.risk); })
+&#10;        .style(&quot;stroke&quot;, function(d) { return d3.rgb(fill(d.source.value.risk)).darker(); })
+&#10;        .attr(&quot;d&quot;, chord)
+&#10;      .append(&quot;svg:title&quot;)
+&#10;        .text(function(d) { return d.source.value.debtor.name + &quot; owes &quot; + d.source.value.creditor.name + &quot; $&quot; + format(d.source.value) + &quot;B.&quot;; });
+&#10;
+&#10;    // Add groups.
+&#10;    var g = svg.selectAll(&quot;g.group&quot;)
+&#10;      .data(layout.groups)
+&#10;      .enter().append(&quot;svg:g&quot;)
+&#10;        .attr(&quot;class&quot;, &quot;group&quot;);
+&#10;
+&#10;    // Add the group arc.
+&#10;    g.append(&quot;svg:path&quot;)
+&#10;        .style(&quot;fill&quot;, function(d) { return fill(array[d.index].risk); })
+&#10;        .attr(&quot;id&quot;, function(d, i) { return &quot;group&quot; + d.index + &quot;-&quot; + j; })
+&#10;        .attr(&quot;d&quot;, arc)
+&#10;        .on(&quot;mouseover&quot;, fade(.1))
+&#10;        .on(&quot;mouseout&quot;, fade(1))
+&#10;        .attr('stroke', '#000') // From the css file
+&#10;      .append(&quot;svg:title&quot;)
+&#10;        .text(function(d) { return array[d.index].name + &quot; &quot; + (j ? &quot;owes&quot; : &quot;is owed&quot;) + &quot; $&quot; + format(d.value) + &quot;B.&quot;; });
+&#10;
+&#10;    // Add the group label (but only for large groups, where it will fit).
+&#10;    // An alternative labeling mechanism would be nice for the small groups.
+&#10;    g.append(&quot;svg:text&quot;)
+&#10;        .attr(&quot;x&quot;, 6)
+&#10;        .attr(&quot;dy&quot;, 15)
+&#10;        .attr('font-size', '11px') // From the CSS file
+&#10;        .attr('font-family', 'sans-serif') // From the CSS file
+&#10;        .attr('pointer-events', 'none') // From the CSS file
+&#10;        .filter(function(d) { return d.value > 110; })
+&#10;      .append(&quot;svg:textPath&quot;)
+&#10;        .attr(&quot;xlink:href&quot;, function(d) { return &quot;#group&quot; + d.index + &quot;-&quot; + j; })
+&#10;        .text(function(d) { return array[d.index].name; });
+&#10;  });
+&#10;
+&#10;  // Memoize the specified country, computing a unique id.
+&#10;  function country(d) {
+&#10;    return countries[d] || (countries[d] = {
+&#10;      name: d,
+&#10;      id: n++
+&#10;    });
+&#10;  }
+&#10;
+&#10;  // Converts a debit object to its primitive numeric value.
+&#10;  function value() {
+&#10;    return +this.amount;
+&#10;  }
+&#10;
+&#10;
+&#10;var ticks = svg.append(&quot;g&quot;)
+&#10;  .selectAll(&quot;g&quot;)
+&#10;    .data(layout.groups)
+&#10;  .enter().append(&quot;g&quot;)
+&#10;  .selectAll(&quot;g&quot;)
+&#10;    .data(groupTicks)
+&#10;  .enter().append(&quot;g&quot;)
+&#10;    .attr(&quot;class&quot;, &quot;ticks&quot;)
+&#10;    .attr(&quot;opacity&quot;, 0)
+&#10;    .attr(&quot;transform&quot;, function(d) {
+&#10;      return &quot;rotate(&quot; + (d.angle * 180 / Math.PI - 90) + &quot;)&quot;
+&#10;          + &quot;translate(&quot; + outerRadius + &quot;,0)&quot;;
+&#10;    });
+&#10;
+&#10;ticks.append(&quot;line&quot;)
+&#10;    .attr(&quot;x1&quot;, 1)
+&#10;    .attr(&quot;y1&quot;, 0)
+&#10;    .attr(&quot;x2&quot;, 5)
+&#10;    .attr(&quot;y2&quot;, 0)
+&#10;    .style(&quot;stroke&quot;, &quot;#000&quot;);
+&#10;
+&#10;ticks.append(&quot;text&quot;)
+&#10;    .attr(&quot;x&quot;, 8)
+&#10;    .attr(&quot;dy&quot;, &quot;.35em&quot;)
+&#10;    .attr(&quot;text-anchor&quot;, function(d) {
+&#10;      return d.angle > Math.PI ? &quot;end&quot; : null;
+&#10;    })
+&#10;    .attr(&quot;transform&quot;, function(d) {
+&#10;      return d.angle > Math.PI ? &quot;rotate(180)translate(-16)&quot; : null;
+&#10;    })
+&#10;    .text(function(d) { return d.label; });
+&#10;
+&#10;/** Returns an array of tick angles and labels, given a group. */
+&#10;function groupTicks(d) {
+&#10;  var k = (d.endAngle - d.startAngle) / d.value;
+&#10;  var tooSmall = d.value &lt; 100;
+&#10;  if (!tooSmall) {
+&#10;      return d3.range(0, d.value, 50).map(function(v, i) {
+&#10;        return {
+&#10;          angle: v * k + d.startAngle,
+&#10;          label: i % 5 ? null : v
+&#10;        };
+&#10;      });
+&#10;  } else {
+&#10;    return [];
+&#10;  }
+&#10;}
+&#10;
+&#10;/** Returns an event handler for fading a given chord group. */
+&#10;function fade(opacity) {
+&#10;  return function(g, i) {
+&#10;    svg.selectAll(&quot;path.chord&quot;)
+&#10;        .filter(function(d) {
+&#10;          return d.source.index != i &amp;&amp; d.target.index != i;
+&#10;        })
+&#10;      .transition()
+&#10;        .style(&quot;opacity&quot;, opacity);
+&#10;
+&#10;    svg.selectAll(&quot;.ticks&quot;)
+&#10;      .transition()
+&#10;        .style(&quot;opacity&quot;, 1-opacity);
+&#10;
+&#10;  };
+&#10;}"      
+      ><image src="invalid.jpg" mime-type="xml/svg"/></media>
+      <caption>Here are two images showing (a) how much each country is owed and (b) how much each country owes. (Hover over different parts for a tooltip)</caption>
+    </figure>
+    </section>
+  </example>
+  <!-- ============== -->
+  <!-- d3 Bezier Curves -->
+  <!-- ============== -->
+  <section><title>Interactive Animations (using the d3 library)</title>
+  <para>This next figure is just javascript. Dragging the handles in one image adjusts the rest.</para>
+  <figure>
+    <media alt="" data:script="var scalar = 3/5,
+&#10;    w = 125*scalar,
+&#10;    h = 150*scalar,
+&#10;    t = .75,
+&#10;    delta = .01,
+&#10;    padding = 10,
+&#10;    points = [{x: 5*scalar, y: 125*scalar}, {x: 0, y: 0}, {x: 60*scalar, y: 50*scalar}, {x: 100*scalar, y: 125*scalar}, {x: 112*scalar, y: 60*scalar}],
+&#10;    bezier = {},
+&#10;    line = d3.svg.line().x(x).y(y),
+&#10;    n = 4,
+&#10;    stroke = d3.scale.category20b(),
+&#10;    orders = d3.range(2, n + 2);
+&#10;
+&#10;var vis = d3.select(config.contextSelector).selectAll('svg')
+&#10;    .data(orders)
+&#10;  .enter().append('svg')
+&#10;    .attr('width', w + 2 * padding)
+&#10;    .attr('height', h + 2 * padding)
+&#10;  .append('g')
+&#10;    .attr('transform', 'translate(' + padding + ',' + padding + ')');
+&#10;
+&#10;update();
+&#10;
+&#10;vis.selectAll('circle.control')
+&#10;    .data(function(d) { return points.slice(0, d) })
+&#10;  .enter().append('circle')
+&#10;    .attr('class', 'control')
+&#10;    .attr('r', 4)
+&#10;    .attr('cx', x)
+&#10;    .attr('cy', y)
+&#10;    .call(d3.behavior.drag()
+&#10;      .on('dragstart', function(d) {
+&#10;        this.__origin__ = [d.x, d.y];
+&#10;      })
+&#10;      .on('drag', function(d) {
+&#10;        d.x = Math.min(w, Math.max(0, this.__origin__[0] += d3.event.dx));
+&#10;        d.y = Math.min(h, Math.max(0, this.__origin__[1] += d3.event.dy));
+&#10;        bezier = {};
+&#10;        update();
+&#10;        vis.selectAll('circle.control')
+&#10;          .attr('cx', x)
+&#10;          .attr('cy', y);
+&#10;      })
+&#10;      .on('dragend', function() {
+&#10;        delete this.__origin__;
+&#10;      }));
+&#10;
+&#10;vis.append('text')
+&#10;  .attr('class', 't')
+&#10;  .attr('x', w / 2)
+&#10;  .attr('y', h)
+&#10;  .attr('text-anchor', 'middle');
+&#10;
+&#10;vis.selectAll('text.controltext')
+&#10;    .data(function(d) { return points.slice(0, d); })
+&#10;  .enter().append('text')
+&#10;    .attr('class', 'controltext')
+&#10;    .attr('dx', '10px')
+&#10;    .attr('dy', '.4em')
+&#10;    .text(function(d, i) { return 'P' + i });
+&#10;
+&#10;var last = 0;
+&#10;d3.timer(function(elapsed) {
+&#10;  t = (t + (elapsed - last) / 5000) % 1;
+&#10;  last = elapsed;
+&#10;  update();
+&#10;});
+&#10;
+&#10;function update() {
+&#10;  var interpolation = vis.selectAll('g')
+&#10;      .data(function(d) { return getLevels(d, t); });
+&#10;  interpolation.enter().append('g')
+&#10;      .style('fill', colour)
+&#10;      .style('stroke', colour);
+&#10;
+&#10;  var circle = interpolation.selectAll('circle')
+&#10;      .data(Object);
+&#10;  circle.enter().append('circle')
+&#10;      .attr('r', 2);
+&#10;  circle
+&#10;      .attr('cx', x)
+&#10;      .attr('cy', y);
+&#10;
+&#10;  var path = interpolation.selectAll('path')
+&#10;      .data(function(d) { return [d]; });
+&#10;  path.enter().append('path')
+&#10;      .attr('class', 'line')
+&#10;      .attr('d', line);
+&#10;  path.attr('d', line);
+&#10;
+&#10;  var curve = vis.selectAll('path.curve')
+&#10;      .data(getCurve);
+&#10;  curve.enter().append('path')
+&#10;      .attr('class', 'curve');
+&#10;  curve.attr('d', line);
+&#10;
+&#10;  vis.selectAll('text.controltext')
+&#10;      .attr('x', x)
+&#10;      .attr('y', y);
+&#10;  vis.selectAll('text.t')
+&#10;      .text('t=' + t.toFixed(2));
+&#10;}
+&#10;
+&#10;function interpolate(d, p) {
+&#10;  if (arguments.length &lt; 2) p = t;
+&#10;  var r = [];
+&#10;  for (var i=1; i&lt;d.length; i++) {
+&#10;    var d0 = d[i-1], d1 = d[i];
+&#10;    r.push({x: d0.x + (d1.x - d0.x) * p, y: d0.y + (d1.y - d0.y) * p});
+&#10;  }
+&#10;  return r;
+&#10;}
+&#10;
+&#10;function getLevels(d, t_) {
+&#10;  if (arguments.length &lt; 2) t_ = t;
+&#10;  var x = [points.slice(0, d)];
+&#10;  for (var i=1; i&lt;d; i++) {
+&#10;    x.push(interpolate(x[x.length-1], t_));
+&#10;  }
+&#10;  return x;
+&#10;}
+&#10;
+&#10;function getCurve(d) {
+&#10;  var curve = bezier[d];
+&#10;  if (!curve) {
+&#10;    curve = bezier[d] = [];
+&#10;    for (var t_=0; t_&lt;=1; t_+=delta) {
+&#10;      var x = getLevels(d, t_);
+&#10;      curve.push(x[x.length-1][0]);
+&#10;    }
+&#10;  }
+&#10;  return [curve.slice(0, t / delta + 1)];
+&#10;}
+&#10;
+&#10;function x(d) { return d.x; }
+&#10;function y(d) { return d.y; }
+&#10;function colour(d, i) {
+&#10;  stroke(-i);
+&#10;  return d.length > 1 ? stroke(i) : 'red';
+&#10;}"><image src="invalid.jpg" mime-type="xml/svg"/></media>
+      <caption>Bezier curves wdrawn with 2 to 5 points</caption>
+    </figure>
+  </section>
+
+  <!-- ============== -->
+  <!-- d3 Bar Example -->
+  <!-- ============== -->
+  <section>
+    <title>Interactive Bar Chart Example (using the d3 library)</title>
+    <para>Alas, I'd be remiss without including a bar chart. This one is ugly but interesting. If you click on an item you can drill down to see more information. Also, the printed version shows the default high-level view.</para>
+    <figure id="d3-bar" data:input="{&quot;name&quot;:&quot;flare&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;analytics&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;cluster&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;AgglomerativeCluster&quot;,&quot;size&quot;:3938},{&quot;name&quot;:&quot;CommunityStructure&quot;,&quot;size&quot;:3812},{&quot;name&quot;:&quot;HierarchicalCluster&quot;,&quot;size&quot;:6714},{&quot;name&quot;:&quot;MergeEdge&quot;,&quot;size&quot;:743}]},{&quot;name&quot;:&quot;graph&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;BetweennessCentrality&quot;,&quot;size&quot;:3534},{&quot;name&quot;:&quot;LinkDistance&quot;,&quot;size&quot;:5731},{&quot;name&quot;:&quot;MaxFlowMinCut&quot;,&quot;size&quot;:7840},{&quot;name&quot;:&quot;ShortestPaths&quot;,&quot;size&quot;:5914},{&quot;name&quot;:&quot;SpanningTree&quot;,&quot;size&quot;:3416}]},{&quot;name&quot;:&quot;optimization&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;AspectRatioBanker&quot;,&quot;size&quot;:7074}]}]},{&quot;name&quot;:&quot;data&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;converters&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;Converters&quot;,&quot;size&quot;:721},{&quot;name&quot;:&quot;DelimitedTextConverter&quot;,&quot;size&quot;:4294},{&quot;name&quot;:&quot;GraphMLConverter&quot;,&quot;size&quot;:9800},{&quot;name&quot;:&quot;IDataConverter&quot;,&quot;size&quot;:1314},{&quot;name&quot;:&quot;JSONConverter&quot;,&quot;size&quot;:2220}]},{&quot;name&quot;:&quot;DataField&quot;,&quot;size&quot;:1759},{&quot;name&quot;:&quot;DataSchema&quot;,&quot;size&quot;:2165},{&quot;name&quot;:&quot;DataSet&quot;,&quot;size&quot;:586},{&quot;name&quot;:&quot;DataSource&quot;,&quot;size&quot;:3331},{&quot;name&quot;:&quot;DataTable&quot;,&quot;size&quot;:772},{&quot;name&quot;:&quot;DataUtil&quot;,&quot;size&quot;:3322}]},{&quot;name&quot;:&quot;display&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;DirtySprite&quot;,&quot;size&quot;:8833},{&quot;name&quot;:&quot;LineSprite&quot;,&quot;size&quot;:1732},{&quot;name&quot;:&quot;RectSprite&quot;,&quot;size&quot;:3623},{&quot;name&quot;:&quot;TextSprite&quot;,&quot;size&quot;:10066}]},{&quot;name&quot;:&quot;flex&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;FlareVis&quot;,&quot;size&quot;:4116}]},{&quot;name&quot;:&quot;vis&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;axis&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;Axes&quot;,&quot;size&quot;:1302},{&quot;name&quot;:&quot;Axis&quot;,&quot;size&quot;:24593},{&quot;name&quot;:&quot;AxisGridLine&quot;,&quot;size&quot;:652},{&quot;name&quot;:&quot;AxisLabel&quot;,&quot;size&quot;:636},{&quot;name&quot;:&quot;CartesianAxes&quot;,&quot;size&quot;:6703}]},{&quot;name&quot;:&quot;data&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;Data&quot;,&quot;size&quot;:20544},{&quot;name&quot;:&quot;DataList&quot;,&quot;size&quot;:19788},{&quot;name&quot;:&quot;DataSprite&quot;,&quot;size&quot;:10349},{&quot;name&quot;:&quot;EdgeSprite&quot;,&quot;size&quot;:3301},{&quot;name&quot;:&quot;NodeSprite&quot;,&quot;size&quot;:19382},{&quot;name&quot;:&quot;render&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;ArrowType&quot;,&quot;size&quot;:698},{&quot;name&quot;:&quot;EdgeRenderer&quot;,&quot;size&quot;:5569},{&quot;name&quot;:&quot;IRenderer&quot;,&quot;size&quot;:353},{&quot;name&quot;:&quot;ShapeRenderer&quot;,&quot;size&quot;:2247}]},{&quot;name&quot;:&quot;ScaleBinding&quot;,&quot;size&quot;:11275},{&quot;name&quot;:&quot;Tree&quot;,&quot;size&quot;:7147},{&quot;name&quot;:&quot;TreeBuilder&quot;,&quot;size&quot;:9930}]},{&quot;name&quot;:&quot;operator&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;distortion&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;BifocalDistortion&quot;,&quot;size&quot;:4461},{&quot;name&quot;:&quot;Distortion&quot;,&quot;size&quot;:6314},{&quot;name&quot;:&quot;FisheyeDistortion&quot;,&quot;size&quot;:3444}]},{&quot;name&quot;:&quot;filter&quot;,&quot;children&quot;:[{&quot;name&quot;:&quot;FisheyeTreeFilter&quot;,&quot;size&quot;:5219},{&quot;name&quot;:&quot;GraphDistanceFilter&quot;,&quot;size&quot;:3165},{&quot;name&quot;:&quot;VisibilityFilter&quot;,&quot;size&quot;:3509}]},{&quot;name&quot;:&quot;IOperator&quot;,&quot;size&quot;:1286},{&quot;name&quot;:&quot;Operator&quot;,&quot;size&quot;:2490},{&quot;name&quot;:&quot;OperatorList&quot;,&quot;size&quot;:5248},{&quot;name&quot;:&quot;OperatorSequence&quot;,&quot;size&quot;:4190},{&quot;name&quot;:&quot;OperatorSwitch&quot;,&quot;size&quot;:2581},{&quot;name&quot;:&quot;SortOperator&quot;,&quot;size&quot;:2023}]},{&quot;name&quot;:&quot;Visualization&quot;,&quot;size&quot;:16540}]}]}">
+      <media alt=""
+data:script="var m = [80, 160, 0, 160], // top right bottom left
+&#10;    viewWidth = 680,
+&#10;    viewHeight = 200,
+&#10;    w = viewWidth - m[1] - m[3], // width
+&#10;    h = viewHeight - m[0] - m[2], // height
+&#10;    x = d3.scale.pow().range([0, w]),
+&#10;    x2 = d3.scale.pow().range([0, w]),
+&#10;    y = 25, // bar height
+&#10;    z = d3.scale.ordinal().range([&quot;steelblue&quot;, &quot;#aaa&quot;]); // bar color
+&#10;
+&#10;var hierarchy = d3.layout.partition()
+&#10;    .value(function(d) { return d.size; });
+&#10;
+&#10;var xAxis = d3.svg.axis()
+&#10;    .scale(x2)
+&#10;    .orient(&quot;top&quot;);
+&#10;
+&#10;var svg = d3.select(config.contextSelector).append(&quot;svg:svg&quot;)
+&#10;//    .attr(&quot;width&quot;, w + m[1] + m[3])
+&#10;//    .attr(&quot;height&quot;, h + m[0] + m[2])
+&#10;    .attr('viewbox', &quot;0 0 &quot; + viewWidth + &quot; &quot; + viewHeight)
+&#10;  .append(&quot;svg:g&quot;)
+&#10;    .attr(&quot;transform&quot;, &quot;translate(&quot; + m[3] + &quot;,&quot; + m[0] + &quot;)&quot;);
+&#10;
+&#10;svg.append(&quot;svg:rect&quot;)
+&#10;    .attr(&quot;class&quot;, &quot;background&quot;)
+&#10;    .attr('fill', 'none')
+&#10;    .attr('pointer-events', 'none')
+&#10;    .attr(&quot;width&quot;, w)
+&#10;    .attr(&quot;height&quot;, h)
+&#10;    .on(&quot;click&quot;, up);
+&#10;
+&#10;svg.append(&quot;svg:g&quot;)
+&#10;    .attr(&quot;class&quot;, &quot;x axis&quot;);
+&#10;
+&#10;svg.append(&quot;svg:g&quot;)
+&#10;    .attr(&quot;class&quot;, &quot;y axis&quot;)
+&#10;  .append(&quot;svg:line&quot;)
+&#10;    .attr(&quot;y1&quot;, &quot;100%&quot;);
+&#10;
+&#10;var root = JSON.parse(config.input);
+&#10;  hierarchy.nodes(root);
+&#10;  x.domain([0, root.value]).nice();
+&#10;  down(root, 0, !config.isInteractive);
+&#10;
+&#10;
+&#10;function down(d, i, dontDelay) {
+&#10;  if (!d.children || this.__transition__) return;
+&#10;  var duration = d3.event &amp;&amp; d3.event.altKey ? 7500 : 750,
+&#10;      delay = duration / d.children.length;
+&#10;
+&#10;  // Mark any currently-displayed bars as exiting.
+&#10;  var exit = svg.selectAll(&quot;.enter&quot;).attr(&quot;class&quot;, &quot;exit&quot;);
+&#10;
+&#10;  // Entering nodes immediately obscure the clicked-on bar, so hide it.
+&#10;  exit.selectAll(&quot;rect&quot;).filter(function(p) { return p === d; })
+&#10;      .style(&quot;fill-opacity&quot;, 1e-6);
+&#10;
+&#10;  // Enter the new bars for the clicked-on data.
+&#10;  // Per above, entering bars are immediately visible.
+&#10;  var enter = bar(d)
+&#10;      .attr(&quot;transform&quot;, stack(i))
+&#10;      .style(&quot;opacity&quot;, 1);
+&#10;
+&#10;  // Have the text fade-in, even though the bars are visible.
+&#10;  // Color the bars as parents; they will fade to children if appropriate.
+&#10;  enter.select(&quot;text&quot;).style(&quot;fill-opacity&quot;, 1e-6);
+&#10;  enter.select(&quot;rect&quot;).style(&quot;fill&quot;, z(true));
+&#10;
+&#10;  // Update the x-scale domain.
+&#10;  x.domain([0, d3.max(d.children, function(d) { return d.value; })]).nice();
+&#10;
+&#10;  // Update the x-axis.
+&#10;  var hack = svg.selectAll(&quot;.x.axis&quot;);
+&#10;  if (!dontDelay) {
+&#10;    hack = hack
+&#10;      .transition()
+&#10;      .duration(duration);
+&#10;  }
+&#10;      hack.call(xAxis);
+&#10;
+&#10;  // Transition entering bars to their new position.
+&#10;  var enterTransition = enter;
+&#10;  if (!dontDelay) {
+&#10;    enterTransition = enter
+&#10;      .transition()
+&#10;      .duration(duration)
+&#10;      .delay(function(d, i) { return i * delay; });
+&#10;  }
+&#10;      enterTransition.attr(&quot;transform&quot;, function(d, i) { return &quot;translate(0,&quot; + y * i * 1.2 + &quot;)&quot;; });
+&#10;
+&#10;  // Transition entering text.
+&#10;  enterTransition.select(&quot;text&quot;).style(&quot;fill-opacity&quot;, 1);
+&#10;
+&#10;  // Transition entering rects to the new x-scale.
+&#10;  enterTransition.select(&quot;rect&quot;)
+&#10;      .attr(&quot;width&quot;, function(d) { return x(d.value); })
+&#10;      .style(&quot;fill&quot;, function(d) { return z(!!d.children); });
+&#10;
+&#10;  // Transition exiting bars to fade out.
+&#10;  var exitTransition = exit.transition()
+&#10;      .duration(duration)
+&#10;      .style(&quot;opacity&quot;, 1e-6)
+&#10;      .remove();
+&#10;
+&#10;  // Transition exiting bars to the new x-scale.
+&#10;  exitTransition.selectAll(&quot;rect&quot;).attr(&quot;width&quot;, function(d) { return x(d.value); });
+&#10;
+&#10;  // Rebind the current node to the background.
+&#10;  svg.select(&quot;.background&quot;).data([d])
+&#10;    .transition()
+&#10;    .duration(duration * 2)
+&#10;    ; d.index = i;
+&#10;}
+&#10;
+&#10;function up(d) {
+&#10;  if (!d.parent || this.__transition__) return;
+&#10;  var duration = d3.event &amp;&amp; d3.event.altKey ? 7500 : 750,
+&#10;      delay = duration / d.children.length;
+&#10;
+&#10;  // Mark any currently-displayed bars as exiting.
+&#10;  var exit = svg.selectAll(&quot;.enter&quot;).attr(&quot;class&quot;, &quot;exit&quot;);
+&#10;
+&#10;  // Enter the new bars for the clicked-on data's parent.
+&#10;  var enter = bar(d.parent)
+&#10;      .attr(&quot;transform&quot;, function(d, i) { return &quot;translate(0,&quot; + y * i * 1.2 + &quot;)&quot;; })
+&#10;      .style(&quot;opacity&quot;, 1e-6);
+&#10;
+&#10;  // Color the bars as appropriate.
+&#10;  // Exiting nodes will obscure the parent bar, so hide it.
+&#10;  enter.select(&quot;rect&quot;)
+&#10;      .style(&quot;fill&quot;, function(d) { return z(!!d.children); })
+&#10;    .filter(function(p) { return p === d; })
+&#10;      .style(&quot;fill-opacity&quot;, 1e-6);
+&#10;
+&#10;  // Update the x-scale domain.
+&#10;  x.domain([0, d3.max(d.parent.children, function(d) { return d.value; })]).nice();
+&#10;
+&#10;  // Update the x-axis.
+&#10;  svg.selectAll(&quot;.x.axis&quot;).transition()
+&#10;      .duration(duration * 2)
+&#10;      .call(xAxis);
+&#10;
+&#10;  // Transition entering bars to fade in over the full duration.
+&#10;  var enterTransition = enter.transition()
+&#10;      .duration(duration * 2)
+&#10;      .style(&quot;opacity&quot;, 1);
+&#10;
+&#10;  // Transition entering rects to the new x-scale.
+&#10;  // When the entering parent rect is done, make it visible!
+&#10;  enterTransition.select(&quot;rect&quot;)
+&#10;      .attr(&quot;width&quot;, function(d) { return x(d.value); })
+&#10;      .each(&quot;end&quot;, function(p) { if (p === d) d3.select(this).style(&quot;fill-opacity&quot;, null); });
+&#10;
+&#10;  // Transition exiting bars to the parent's position.
+&#10;  var exitTransition = exit.selectAll(&quot;g&quot;).transition()
+&#10;      .duration(duration)
+&#10;      .delay(function(d, i) { return i * delay; })
+&#10;      .attr(&quot;transform&quot;, stack(d.index));
+&#10;
+&#10;  // Transition exiting text to fade out.
+&#10;  exitTransition.select(&quot;text&quot;)
+&#10;      .style(&quot;fill-opacity&quot;, 1e-6);
+&#10;
+&#10;  // Transition exiting rects to the new scale and fade to parent color.
+&#10;  exitTransition.select(&quot;rect&quot;)
+&#10;      .attr(&quot;width&quot;, function(d) { return x(d.value); })
+&#10;      .style(&quot;fill&quot;, z(true));
+&#10;
+&#10;  // Remove exiting nodes when the last child has finished transitioning.
+&#10;  exit.transition().duration(duration * 2).remove();
+&#10;
+&#10;  // Rebind the current parent to the background.
+&#10;  svg.select(&quot;.background&quot;).data([d.parent]).transition().duration(duration * 2);
+&#10;}
+&#10;
+&#10;// Creates a set of bars for the given data node, at the specified index.
+&#10;function bar(d) {
+&#10;  var bar = svg.insert(&quot;svg:g&quot;, &quot;.y.axis&quot;)
+&#10;      .attr(&quot;class&quot;, &quot;enter&quot;)
+&#10;      .attr(&quot;transform&quot;, &quot;translate(0,5)&quot;)
+&#10;    .selectAll(&quot;g&quot;)
+&#10;      .data(d.children)
+&#10;    .enter().append(&quot;svg:g&quot;)
+&#10;      .style(&quot;cursor&quot;, function(d) { return !d.children ? null : &quot;pointer&quot;; })
+&#10;      .on(&quot;click&quot;, down);
+&#10;
+&#10;  bar.append(&quot;svg:text&quot;)
+&#10;      .attr(&quot;x&quot;, -6)
+&#10;      .attr(&quot;y&quot;, y / 2)
+&#10;      .attr(&quot;dy&quot;, &quot;.35em&quot;)
+&#10;      .attr(&quot;text-anchor&quot;, &quot;end&quot;)
+&#10;      .text(function(d) { return d.name; });
+&#10;
+&#10;  bar.append(&quot;svg:rect&quot;)
+&#10;      .attr(&quot;width&quot;, function(d) { return x(d.value); })
+&#10;      .attr(&quot;height&quot;, y);
+&#10;
+&#10;  return bar;
+&#10;}
+&#10;
+&#10;// A stateful closure for stacking bars horizontally.
+&#10;function stack(i) {
+&#10;  var x0 = 0;
+&#10;  return function(d) {
+&#10;    var tx = &quot;translate(&quot; + x0 + &quot;,&quot; + y * i * 1.2 + &quot;)&quot;;
+&#10;    x0 += x(d.value);
+&#10;    return tx;
+&#10;  };
+&#10;}"><image src="invalid.jpg" mime-type="xml/svg"/></media>
+      <caption>Here is a figure with a bar chart showing the number of lines of code for different packages</caption>
+    </figure>
+  </section>
+
+
+  <!-- ============== -->
+  <!-- Math Example   -->
+  <!-- ============== -->
+  <section>
+    <title>MathJax Example</title>
+    <para>This math is typeset using MathJax instead of pmml2svg. One advantage is that we hopefully no longer need to generate PNG files. MathJax can be configured to generate HTML+CSS (should work in EPUB) or SVG (should work in PDF).</para>
+    <equation>
+      <math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mrow><mrow><msubsup><mo>&#x222B;</mo><mrow><mrow><mo>&#x2212;</mo><mi>&#x221E;</mi></mrow></mrow><mrow><mi>&#x221E;</mi></mrow></msubsup><mrow><mrow><mrow><mi>s</mi></mrow><mo>&#x2062;</mo><mfenced open="(" close=")"><mrow><mi>t</mi></mrow></mfenced></mrow><mo>&#x2062;</mo><msup><mi>e</mi><mrow><mfrac><mrow><mi>j</mi><mo>&#x2062;</mo><mn>2</mn><mo>&#x2062;</mo><mi>&#x3C0;</mi><mo>&#x2062;</mo><mrow><mi>k</mi></mrow><mo>&#x2062;</mo><mrow><mi>t</mi></mrow></mrow><mrow><mi></mi><msub><mi>T</mi><mi>s</mi></msub><mi></mi></mrow></mfrac></mrow></msup><mo>&#x2062;</mo><msup><mi>e</mi><mrow><mrow><mo>&#x2212;</mo><mrow><mo>(</mo><mi>j</mi><mo>&#x2062;</mo><mn>2</mn><mo>&#x2062;</mo><mi>&#x3C0;</mi><mo>&#x2062;</mo><mrow><mi>f</mi></mrow><mo>&#x2062;</mo><mrow><mi>t</mi></mrow><mo>)</mo></mrow></mrow></mrow></msup></mrow><mo>d</mo><mi><mrow><mi>t</mi>
+        </mrow></mi></mrow><mo>=</mo><mrow><msubsup><mo>&#x222B;</mo><mrow><mrow><mo>&#x2212;</mo><mi>&#x221E;</mi></mrow></mrow><mrow><mi>&#x221E;</mi></mrow></msubsup><mrow><mrow><mrow><mi>s</mi></mrow><mo>&#x2062;</mo><mfenced open="(" close=")"><mrow><mi>t</mi></mrow></mfenced></mrow><mo>&#x2062;</mo><msup><mi>e</mi><mrow><mrow><mo>&#x2212;</mo><mrow><mo>(</mo><mi>j</mi><mo>&#x2062;</mo><mn>2</mn><mo>&#x2062;</mo><mi>&#x3C0;</mi><mo>&#x2062;</mo><mrow><mo>(</mo><mrow><mi>f</mi></mrow><mo>&#x2212;</mo><mfrac><mrow><mi>k</mi></mrow><mrow><mi></mi><msub><mi>T</mi><mi>s</mi></msub><mi></mi></mrow></mfrac><mo>)</mo></mrow><mo>&#x2062;</mo><mrow><mi>t</mi></mrow><mo>)</mo></mrow></mrow></mrow></msup></mrow><mo>d</mo><mi><mrow><mi>t</mi>
+        </mrow></mi></mrow></mrow></mrow><mrow><mo>=</mo></mrow><mrow><mrow><mrow><mi>S</mi></mrow><mo>&#x2062;</mo><mrow><mo>(</mo><mrow><mi>f</mi></mrow><mo>&#x2212;</mo><mfrac><mrow><mi>k</mi></mrow><mrow><mi></mi><msub><mi>T</mi><mi>s</mi></msub><mi></mi></mrow></mfrac><mo>)</mo></mrow></mrow></mrow></mrow>
+      </math>
+    </equation>
+  </section>
+
+
+<!-- The following sections are a "HACK" to get the ccap-physics styling and numbering to work -->
+</section><!-- Close Section -->
+</section><!-- Close Chapter -->
+</section><!-- Close Book -->
+
+</content>
